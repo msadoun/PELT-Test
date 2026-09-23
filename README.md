@@ -19,11 +19,16 @@ Implementation follows Killick, Fearnhead & Eckley (2012) and the Python referen
 
 Open `index.html` in a browser. No install is required.
 
-If the browser blocks local scripts, serve this folder and open http://127.0.0.1:8765/ :
+If the browser blocks local scripts, **change into this project folder first**, then start the server:
 
 ```powershell
+cd "D:\sadoun\Devs\PELT Test"
 python -m http.server 8765
 ```
+
+Then open http://127.0.0.1:8765/
+
+The server’s working directory must be this project. Running `python -m http.server` from `C:\Windows\System32` (or any other folder) will serve that folder instead. A `GET /favicon.ico` 404 is harmless — there is no favicon.
 
 The page draws:
 
