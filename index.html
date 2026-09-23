@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PELT results — CPIAUCSL_PC1</title>
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --card: #ffffff;
+      --ink: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --accent: #1d4ed8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font: 15px/1.45 "Segoe UI", system-ui, sans-serif;
+    }
+    header, main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+    header { padding: 28px 0 12px; }
+    h1 { margin: 0 0 6px; font-size: 1.6rem; font-weight: 650; }
+    .lede { margin: 0; color: var(--muted); max-width: 72ch; }
+    .controls, .stats, .chart-card, .table-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      margin: 14px 0;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px 20px;
+      padding: 16px 18px;
+    }
+    label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
+    select, input[type="range"] { width: 100%; }
+    select {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: #fff;
+      font: inherit;
+    }
+    .value { margin-top: 4px; font-variant-numeric: tabular-nums; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      padding: 4px 0;
+    }
+    .stat { padding: 14px 18px; }
+    .stat + .stat { border-left: 1px solid var(--line); }
+    .stat b { display: block; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+    .stat span { color: var(--muted); font-size: 0.8rem; }
+    .chart-card { padding: 12px 12px 8px; }
+    .chart-wrap { position: relative; }
+    canvas#chart { width: 100%; height: 420px; display: block; cursor: crosshair; }
+    canvas#strip { width: 100%; height: 28px; display: block; margin-top: 8px; }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding: 8px 6px 4px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+    .legend i {
+      display: inline-block;
+      width: 18px;
+      height: 3px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .swatch-data { background: #9aa3af; }
+    .swatch-mean { background: #1d4ed8; }
+    .swatch-cp { background: #c2410c; height: 0; border-top: 2px dashed #c2410c; }
+    #tooltip {
+      position: absolute;
+      z-index: 2;
+      min-width: 160px;
+      padding: 8px 10px;
+      background: #111827;
+      color: #fff;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      pointer-events: none;
+    }
+    #tooltip strong, #tooltip span { display: block; }
+    .table-card { overflow: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; }
+    th { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    caption {
+      caption-side: top;
+      text-align: left;
+      padding: 14px 12px 8px;
+      font-weight: 650;
+    }
+    footer { color: var(--muted); font-size: 0.8rem; padding: 8px 0 32px; }
+    @media (max-width: 720px) {
+      .stat + .stat { border-left: 0; border-top: 1px solid var(--line); }
+      canvas#chart { height: 320px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>PELT results on US CPI inflation</h1>
+    <p class="lede">
+      Pruned Exact Linear Time changepoints for a change in mean, run on
+      FRED <code>CPIAUCSL_PC1</code> — CPI-U all items, percent change from a year ago,
+      monthly, seasonally adjusted. The chart shows the fitted regimes, not the algorithm stepping through the series.
+    </p>
+  </header>
+  <main>
+    <section class="controls">
+      <div>
+        <label for="penalty-kind">Penalty</label>
+        <select id="penalty-kind">
+          <option value="BIC" selected>BIC — 2 σ² log(n)</option>
+          <option value="MBIC">MBIC — σ² (1 + 2 log n)</option>
+          <option value="SIC">SIC — σ² log(n)</option>
+          <option value="AIC">AIC — 2 σ²</option>
+          <option value="NICODE">Original repo — 2 log(n), unscaled</option>
+        </select>
+      </div>
+      <div>
+        <label for="multiplier">Penalty multiplier</label>
+        <input id="multiplier" type="range" min="0.25" max="6" step="0.25" value="1">
+        <div class="value" id="multiplier-value">1.00×</div>
+      </div>
+      <div>
+        <label for="minseglen">Minimum segment length</label>
+        <select id="minseglen">
+          <option value="6">6 months</option>
+          <option value="12" selected>12 months</option>
+          <option value="24">24 months</option>
+          <option value="36">36 months</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="stats">
+      <div class="stat"><b id="months-out">—</b><span>Observations</span></div>
+      <div class="stat"><b id="range-out">—</b><span>Sample</span></div>
+      <div class="stat"><b id="count-out">—</b><span>Changepoints</span></div>
+      <div class="stat"><b id="regimes-out">—</b><span>Regimes</span></div>
+      <div class="stat"><b id="penalty-out">—</b><span>Penalty (RSS)</span></div>
+      <div class="stat"><b id="sigma-out">—</b><span>σ (sample)</span></div>
+    </section>
+
+    <section class="chart-card">
+      <div class="chart-wrap">
+        <canvas id="chart" aria-label="CPI year-over-year with PELT segment means and changepoints"></canvas>
+        <div id="tooltip" hidden></div>
+      </div>
+      <canvas id="strip" aria-label="Regime mean strip"></canvas>
+      <div class="legend">
+        <span><i class="swatch-data"></i>CPI YoY</span>
+        <span><i class="swatch-mean"></i>Segment mean</span>
+        <span><i class="swatch-cp"></i>Changepoint</span>
+        <span>Means: teal &lt; 2.5%, blue 2.5–4%, orange 4–6%, red ≥ 6%</span>
+      </div>
+    </section>
+
+    <section class="table-card">
+      <table>
+        <caption>Detected inflation regimes</caption>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Start</th>
+            <th>End</th>
+            <th class="num">Months</th>
+            <th class="num">Mean %</th>
+            <th class="num">Min</th>
+            <th class="num">Max</th>
+            <th class="num">Δ mean</th>
+          </tr>
+        </thead>
+        <tbody id="segment-body"></tbody>
+      </table>
+    </section>
+
+    <footer>
+      Source: FRED CPIAUCSL_PC1, downloaded 2026-09-23. October 2025 is missing in the workbook and was skipped.
+      Algorithm: Killick, Fearnhead &amp; Eckley (2012), following
+      <a href="https://github.com/nicodesh/pelt-algorithm">nicodesh/pelt-algorithm</a>.
+      Penalty is scaled by the sample variance so BIC is usable on percent-level data.
+    </footer>
+  </main>
+  <script src="data/cpiaucsl.js"></script>
+  <script src="pelt.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
