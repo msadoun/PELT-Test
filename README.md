@@ -4,6 +4,8 @@ Visual changepoint analysis of FRED **CPIAUCSL_PC1** (CPI-U all items, percent c
 
 This project shows the **fitted regimes**, not an animation of the algorithm running.
 
+![PELT results dashboard](docs/dashboard.png)
+
 Implementation follows Killick, Fearnhead & Eckley (2012) and the Python reference at [nicodesh/pelt-algorithm](https://github.com/nicodesh/pelt-algorithm). The cost is residual sum of squares for a change in mean. The default BIC penalty is scaled by the sample variance so it is usable on percent-level data (`2 σ² log n`). The original repo’s unscaled `2 log n` penalty is available as a comparison option.
 
 ## Dataset
@@ -89,5 +91,6 @@ analyze.py            Load the Excel file and save a figure
 data/cpiaucsl.json    Extracted series
 data/cpiaucsl.js      Same series for the dashboard
 CPIAUCSL_PC1.xlsx     Source workbook
+docs/dashboard.png    Dashboard screenshot
 requirements.txt      Python dependencies
 ```
